@@ -3,6 +3,9 @@ import datetime
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+import os
+import urllib.request
 
 # --- 1. 頁面基礎設定 ---
 st.set_page_config(
@@ -12,64 +15,80 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- 2. 視覺化繪圖引擎 (新增模組) ---
-def draw_pulse_wave(pulse_type):
+# --- 2. [新增] 字型自動修復模組 ---
+def get_chinese_font():
     """
-    根據脈象類型，使用數學公式畫出對應的「示意波形」
-    這讓使用者能看見「手感」的具體樣子
+    解決 Linux (Streamlit Cloud) 無法顯示中文的問題。
+    自動下載 Google Noto Sans TC 字型檔。
     """
-    x = np.linspace(0, 4 * np.pi, 400) # 產生 X 軸時間點
-    fig, ax = plt.subplots(figsize=(6, 2)) # 設定圖片大小 (長條狀)
+    font_path = "NotoSansTC-Regular.otf"
     
-    # 設定背景風格，去除多餘邊框，讓它看起來像醫療儀器
+    # 如果字型檔不存在，就從網路下載
+    if not os.path.exists(font_path):
+        # 使用 Google Fonts 的開源字型 (約 16MB，下載一次即可)
+        url = "https://raw.githubusercontent.com/googlefonts/noto-cjk/main/Sans/OTF/TraditionalChinese/NotoSansCJKtc-Regular.otf"
+        try:
+            with st.spinner("正在下載中文字型檔 (首次執行需約 10 秒)..."):
+                urllib.request.urlretrieve(url, font_path)
+        except Exception as e:
+            st.error(f"字型下載失敗: {e}")
+            return None
+
+    # 載入字型屬性
+    return fm.FontProperties(fname=font_path)
+
+# --- 3. 視覺化繪圖引擎 (已修復亂碼) ---
+def draw_pulse_wave(pulse_type):
+    x = np.linspace(0, 4 * np.pi, 400)
+    fig, ax = plt.subplots(figsize=(6, 2))
+    
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.spines['left'].set_visible(False)
-    ax.get_yaxis().set_visible(False) # 隱藏 Y 軸數值
-    ax.set_facecolor('#f0f2f6') # 與 Streamlit 背景融合
+    ax.get_yaxis().set_visible(False)
+    ax.set_facecolor('#f0f2f6')
     fig.patch.set_facecolor('#f0f2f6')
 
+    # 取得中文字型物件
+    chinese_font = get_chinese_font()
+
     if "弦脈" in pulse_type:
-        # 弦脈：張力大，波峰方正，下降慢
         y = np.sin(x) + 0.3 * np.sin(3*x) 
         title = "🌊 弦脈波形：張力高，如按琴弦"
-        color = '#FF5252' # 紅色示警
-        
+        color = '#FF5252'
     elif "滑脈" in pulse_type:
-        # 滑脈：圓潤流暢，完美的正弦波
         y = np.sin(x)
         title = "🌊 滑脈波形：圓滑流利，如珠滾盤"
-        color = '#448AFF' # 藍色流動
-        
+        color = '#448AFF'
     elif "沉細" in pulse_type:
-        # 沉細：波幅小 (除以 3)，且位置低
         y = 0.3 * np.sin(x)
         title = "🌊 沉細波形：波幅低扁，若有若無"
-        color = '#9E9E9E' # 灰色低調
-        
+        color = '#9E9E9E'
     elif "數脈" in pulse_type:
-        # 數脈：頻率快 (X 軸乘以 2)
         y = np.sin(2 * x)
         title = "🌊 數脈波形：頻率急促，波峰密集"
-        color = '#FF9800' # 橘色警示
-        
+        color = '#FF9800'
     elif "虛脈" in pulse_type:
-        # 虛脈：波幅小且帶有雜訊 (不穩定)
         noise = np.random.normal(0, 0.05, x.shape)
         y = 0.4 * np.sin(x) + noise
         title = "🌊 虛脈波形：浮散無力，波形不穩"
-        color = '#90A4AE' # 淡藍虛弱
-        
+        color = '#90A4AE'
     else:
         y = np.sin(x)
         title = "正常波形"
         color = 'black'
 
     ax.plot(x, y, color=color, linewidth=2.5)
-    ax.set_title(title, fontname="Microsoft JhengHei", fontsize=12) # 嘗試設定中文標題
+    
+    # 關鍵修正：這裡不使用 fontname="Microsoft JhengHei"，而是使用 fontproperties
+    if chinese_font:
+        ax.set_title(title, fontproperties=chinese_font, fontsize=14)
+    else:
+        ax.set_title(title, fontsize=12) # 如果下載失敗，至少顯示亂碼但不會報錯
+        
     return fig
 
-# --- 3. 系統邏輯核心 (保留選單與資料) ---
+# --- 4. 系統邏輯核心 (完全保留) ---
 DIAGNOSIS_DB = {
     "弦脈 (Wiry) —— 手感：像按在琴弦上，緊繃有力": {
         "pattern": "肝氣鬱結 / 自律神經張力過高",
@@ -113,7 +132,7 @@ DIAGNOSIS_DB = {
     }
 }
 
-# --- 4. 登入系統邏輯 (完全保留) ---
+# --- 5. 登入系統邏輯 (完全保留) ---
 def check_password():
     """驗證密碼函數"""
     def password_entered():
@@ -140,10 +159,10 @@ def check_password():
     else:
         return True
 
-# --- 5. 主程式介面 ---
+# --- 6. 主程式介面 ---
 if check_password():
     st.title("🌿 Malikay工作室")
-    st.caption("生物邏輯共振助手 v2.4 (Visualizer)")
+    st.caption("生物邏輯共振助手 v2.5 (Font Fixed)")
     
     # 輸入區
     with st.expander("📝 第一步：建立病患檔案 (必填)", expanded=True):
@@ -176,14 +195,14 @@ if check_password():
 
         data = DIAGNOSIS_DB[selected_pulse]
         
-        # Step 2: 系統診斷 (視覺化升級版)
+        # Step 2: 系統診斷
         st.markdown("---")
         st.subheader("📊 診斷結果")
         
-        # [新增功能] 顯示脈波圖
+        # 顯示脈波圖
         st.markdown("**【脈波視覺化 (Pulse Visualization)】**")
         fig = draw_pulse_wave(selected_pulse)
-        st.pyplot(fig) # 將 Python 畫的圖顯示在網頁上
+        st.pyplot(fig) 
         
         st.info(f"**【系統狀態】**\n\n{data['pattern']}")
         st.success(f"**【調理策略】**\n\n{data['strategy']}")
