@@ -1,8 +1,10 @@
 import streamlit as st
 import datetime
 import time
+import numpy as np
+import matplotlib.pyplot as plt
 
-# --- 1. 頁面基礎設定 (手機版建議用 centered) ---
+# --- 1. 頁面基礎設定 ---
 st.set_page_config(
     page_title="Malikay工作室",
     page_icon="🌿",
@@ -10,8 +12,64 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- 2. 系統邏輯核心 (已更新選單描述) ---
-# 這裡修改了"Key"的名稱，加上了白話文解釋，讓選單直接顯示說明
+# --- 2. 視覺化繪圖引擎 (新增模組) ---
+def draw_pulse_wave(pulse_type):
+    """
+    根據脈象類型，使用數學公式畫出對應的「示意波形」
+    這讓使用者能看見「手感」的具體樣子
+    """
+    x = np.linspace(0, 4 * np.pi, 400) # 產生 X 軸時間點
+    fig, ax = plt.subplots(figsize=(6, 2)) # 設定圖片大小 (長條狀)
+    
+    # 設定背景風格，去除多餘邊框，讓它看起來像醫療儀器
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.get_yaxis().set_visible(False) # 隱藏 Y 軸數值
+    ax.set_facecolor('#f0f2f6') # 與 Streamlit 背景融合
+    fig.patch.set_facecolor('#f0f2f6')
+
+    if "弦脈" in pulse_type:
+        # 弦脈：張力大，波峰方正，下降慢
+        y = np.sin(x) + 0.3 * np.sin(3*x) 
+        title = "🌊 弦脈波形：張力高，如按琴弦"
+        color = '#FF5252' # 紅色示警
+        
+    elif "滑脈" in pulse_type:
+        # 滑脈：圓潤流暢，完美的正弦波
+        y = np.sin(x)
+        title = "🌊 滑脈波形：圓滑流利，如珠滾盤"
+        color = '#448AFF' # 藍色流動
+        
+    elif "沉細" in pulse_type:
+        # 沉細：波幅小 (除以 3)，且位置低
+        y = 0.3 * np.sin(x)
+        title = "🌊 沉細波形：波幅低扁，若有若無"
+        color = '#9E9E9E' # 灰色低調
+        
+    elif "數脈" in pulse_type:
+        # 數脈：頻率快 (X 軸乘以 2)
+        y = np.sin(2 * x)
+        title = "🌊 數脈波形：頻率急促，波峰密集"
+        color = '#FF9800' # 橘色警示
+        
+    elif "虛脈" in pulse_type:
+        # 虛脈：波幅小且帶有雜訊 (不穩定)
+        noise = np.random.normal(0, 0.05, x.shape)
+        y = 0.4 * np.sin(x) + noise
+        title = "🌊 虛脈波形：浮散無力，波形不穩"
+        color = '#90A4AE' # 淡藍虛弱
+        
+    else:
+        y = np.sin(x)
+        title = "正常波形"
+        color = 'black'
+
+    ax.plot(x, y, color=color, linewidth=2.5)
+    ax.set_title(title, fontname="Microsoft JhengHei", fontsize=12) # 嘗試設定中文標題
+    return fig
+
+# --- 3. 系統邏輯核心 (保留選單與資料) ---
 DIAGNOSIS_DB = {
     "弦脈 (Wiry) —— 手感：像按在琴弦上，緊繃有力": {
         "pattern": "肝氣鬱結 / 自律神經張力過高",
@@ -55,7 +113,7 @@ DIAGNOSIS_DB = {
     }
 }
 
-# --- 3. 登入系統邏輯 (完全保留) ---
+# --- 4. 登入系統邏輯 (完全保留) ---
 def check_password():
     """驗證密碼函數"""
     def password_entered():
@@ -82,13 +140,12 @@ def check_password():
     else:
         return True
 
-# --- 4. 手機版主程式介面 (完全保留邏輯) ---
+# --- 5. 主程式介面 ---
 if check_password():
-    # 標題區
     st.title("🌿 Malikay工作室")
-    st.caption("生物邏輯共振助手 v2.3 (Enhanced UI)")
+    st.caption("生物邏輯共振助手 v2.4 (Visualizer)")
     
-    # 輸入區：加上 Session State 確保輸入不會在重整時消失
+    # 輸入區
     with st.expander("📝 第一步：建立病患檔案 (必填)", expanded=True):
         patient_name = st.text_input("病患姓名")
         main_complaint = st.text_area("主要症狀/訴求 (請詳細描述)", height=80)
@@ -98,7 +155,6 @@ if check_password():
     # Step 1: 脈診輸入
     st.markdown("### 🔍 第二步：脈象輸入")
     
-    # [修正] 這裡會直接顯示上面修改過的「白話文選單」
     pulse_options = ["請滑動選擇..."] + list(DIAGNOSIS_DB.keys())
     selected_pulse = st.selectbox(
         "請根據您的手感選擇最接近的描述：",
@@ -111,23 +167,25 @@ if check_password():
         # --- 邏輯檢查閘門 ---
         if not patient_name or not main_complaint:
             st.warning("⚠️ 無法執行：請先回到第一步，填寫【病患姓名】與【主要症狀】。")
-            st.stop() # 強制停止
+            st.stop()
             
         if selected_pulse == "請滑動選擇...":
             st.warning("⚠️ 無法執行：請在第二步選擇一個具體的【脈象】。")
-            st.stop() # 強制停止
+            st.stop()
         # ----------------------------
 
-        # 取得數據
         data = DIAGNOSIS_DB[selected_pulse]
         
-        # Step 2: 系統診斷
+        # Step 2: 系統診斷 (視覺化升級版)
         st.markdown("---")
         st.subheader("📊 診斷結果")
         
-        # 狀態卡片
+        # [新增功能] 顯示脈波圖
+        st.markdown("**【脈波視覺化 (Pulse Visualization)】**")
+        fig = draw_pulse_wave(selected_pulse)
+        st.pyplot(fig) # 將 Python 畫的圖顯示在網頁上
+        
         st.info(f"**【系統狀態】**\n\n{data['pattern']}")
-        # 策略卡片
         st.success(f"**【調理策略】**\n\n{data['strategy']}")
             
         # Step 3: 穴位方案
@@ -162,7 +220,6 @@ Malikay工作室 - 療程記錄
 ========================================
 """
         st.markdown("---")
-        # 下載按鈕
         st.download_button(
             label="💾 下載病歷記錄 (.txt)",
             data=report_text,
