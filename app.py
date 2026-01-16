@@ -10,9 +10,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- 2. 系統邏輯核心 (完全保留) ---
+# --- 2. 系統邏輯核心 (已更新選單描述) ---
+# 這裡修改了"Key"的名稱，加上了白話文解釋，讓選單直接顯示說明
 DIAGNOSIS_DB = {
-    "弦脈 (Wiry)": {
+    "弦脈 (Wiry) —— 手感：像按在琴弦上，緊繃有力": {
         "pattern": "肝氣鬱結 / 自律神經張力過高",
         "strategy": "疏肝理氣，解痙攣",
         "acupoints": [
@@ -20,7 +21,7 @@ DIAGNOSIS_DB = {
             {"name": "內關 (PC6)", "loc": "手腕橫紋上三指", "method": "平補平瀉 2分鐘"}
         ]
     },
-    "滑脈 (Slippery)": {
+    "滑脈 (Slippery) —— 手感：像珠子在盤子滾動，圓滑流利": {
         "pattern": "痰濕 / 食積 / 消化系統負載過重",
         "strategy": "健脾祛濕，化痰",
         "acupoints": [
@@ -28,7 +29,7 @@ DIAGNOSIS_DB = {
             {"name": "中脘 (CV12)", "loc": "肚臍上四寸", "method": "溫灸或順時針揉 5分鐘"}
         ]
     },
-    "沉細 (Deep & Thready)": {
+    "沉細 (Deep & Thready) —— 手感：輕按摸不到，重按才有，細細一條": {
         "pattern": "腎氣不足 / 氣血兩虛 / 系統能量低",
         "strategy": "補益氣血，提升基礎代謝",
         "acupoints": [
@@ -36,7 +37,7 @@ DIAGNOSIS_DB = {
             {"name": "氣海 (CV6)", "loc": "肚臍下1.5寸", "method": "靜按或熱敷"}
         ]
     },
-    "數脈 (Rapid)": {
+    "數脈 (Rapid) —— 手感：跳動頻率非常快 (急促)": {
         "pattern": "熱證 / 發炎反應 / 代謝亢進",
         "strategy": "清熱涼血，降低系統熵值",
         "acupoints": [
@@ -44,7 +45,7 @@ DIAGNOSIS_DB = {
             {"name": "合谷 (LI4)", "loc": "虎口處", "method": "間歇點按"}
         ]
     },
-    "虛脈 (Empty)": {
+    "虛脈 (Empty) —— 手感：按下去軟綿綿，沒什麼力氣": {
         "pattern": "氣血虧虛 / 循環動力不足",
         "strategy": "大補元氣，激活幫浦",
         "acupoints": [
@@ -81,11 +82,11 @@ def check_password():
     else:
         return True
 
-# --- 4. 手機版主程式介面 (已修正邏輯漏洞) ---
+# --- 4. 手機版主程式介面 (完全保留邏輯) ---
 if check_password():
     # 標題區
     st.title("🌿 Malikay工作室")
-    st.caption("生物邏輯共振助手 v2.2 (Logic Fixed)")
+    st.caption("生物邏輯共振助手 v2.3 (Enhanced UI)")
     
     # 輸入區：加上 Session State 確保輸入不會在重整時消失
     with st.expander("📝 第一步：建立病患檔案 (必填)", expanded=True):
@@ -97,20 +98,20 @@ if check_password():
     # Step 1: 脈診輸入
     st.markdown("### 🔍 第二步：脈象輸入")
     
-    # 這裡加入一個「請選擇」的選項，避免預設直接跳出弦脈
+    # [修正] 這裡會直接顯示上面修改過的「白話文選單」
     pulse_options = ["請滑動選擇..."] + list(DIAGNOSIS_DB.keys())
     selected_pulse = st.selectbox(
-        "請滑動選擇最明顯的特徵：",
+        "請根據您的手感選擇最接近的描述：",
         options=pulse_options
     )
 
     # 按鈕邏輯區
     if st.button("⚡ 執行系統分析", type="primary", use_container_width=True):
         
-        # --- [關鍵修正] 邏輯檢查閘門 ---
+        # --- 邏輯檢查閘門 ---
         if not patient_name or not main_complaint:
             st.warning("⚠️ 無法執行：請先回到第一步，填寫【病患姓名】與【主要症狀】。")
-            st.stop() # 強制停止後續運算
+            st.stop() # 強制停止
             
         if selected_pulse == "請滑動選擇...":
             st.warning("⚠️ 無法執行：請在第二步選擇一個具體的【脈象】。")
