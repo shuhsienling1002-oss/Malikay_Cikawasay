@@ -6,11 +6,11 @@ import time
 st.set_page_config(
     page_title="Malikay工作室",
     page_icon="🌿",
-    layout="centered", # 手機直式閱讀適合置中
+    layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# --- 2. 系統邏輯核心 (完全保留，未變更) ---
+# --- 2. 系統邏輯核心 (完全保留) ---
 DIAGNOSIS_DB = {
     "弦脈 (Wiry)": {
         "pattern": "肝氣鬱結 / 自律神經張力過高",
@@ -81,34 +81,46 @@ def check_password():
     else:
         return True
 
-# --- 4. 手機版主程式介面 (Mobile UI Optimized) ---
+# --- 4. 手機版主程式介面 (已修正邏輯漏洞) ---
 if check_password():
     # 標題區
     st.title("🌿 Malikay工作室")
-    st.caption("生物邏輯共振助手 v2.1 (Mobile)")
+    st.caption("生物邏輯共振助手 v2.2 (Logic Fixed)")
     
-    # [手機優化] 將原本側邊欄的輸入移到主畫面頂部的「折疊區」，方便單手填寫
-    with st.expander("📝 第一步：建立病患檔案 (點擊展開)", expanded=True):
+    # 輸入區：加上 Session State 確保輸入不會在重整時消失
+    with st.expander("📝 第一步：建立病患檔案 (必填)", expanded=True):
         patient_name = st.text_input("病患姓名")
-        main_complaint = st.text_area("主要症狀/訴求", height=80) # 降低高度適應手機
+        main_complaint = st.text_area("主要症狀/訴求 (請詳細描述)", height=80)
 
     st.divider()
 
     # Step 1: 脈診輸入
     st.markdown("### 🔍 第二步：脈象輸入")
-    # [手機優化] 使用 radio 比較佔空間，selectbox 在手機上會變成原生滾輪，體驗較好
+    
+    # 這裡加入一個「請選擇」的選項，避免預設直接跳出弦脈
+    pulse_options = ["請滑動選擇..."] + list(DIAGNOSIS_DB.keys())
     selected_pulse = st.selectbox(
         "請滑動選擇最明顯的特徵：",
-        options=list(DIAGNOSIS_DB.keys())
+        options=pulse_options
     )
 
-    # [手機優化] 按鈕設為 use_container_width=True，讓手指好點擊
+    # 按鈕邏輯區
     if st.button("⚡ 執行系統分析", type="primary", use_container_width=True):
         
+        # --- [關鍵修正] 邏輯檢查閘門 ---
+        if not patient_name or not main_complaint:
+            st.warning("⚠️ 無法執行：請先回到第一步，填寫【病患姓名】與【主要症狀】。")
+            st.stop() # 強制停止後續運算
+            
+        if selected_pulse == "請滑動選擇...":
+            st.warning("⚠️ 無法執行：請在第二步選擇一個具體的【脈象】。")
+            st.stop() # 強制停止
+        # ----------------------------
+
         # 取得數據
         data = DIAGNOSIS_DB[selected_pulse]
         
-        # Step 2: 系統診斷 (改用卡片式呈現，避免左右分欄擠壓)
+        # Step 2: 系統診斷
         st.markdown("---")
         st.subheader("📊 診斷結果")
         
@@ -120,12 +132,11 @@ if check_password():
         # Step 3: 穴位方案
         st.markdown("### 💆 第三步：穴位干預")
         
-        # [手機優化] 移除 st.table，改用 Loop 生成「卡片」，垂直滑動閱讀體驗最佳
         for point in data['acupoints']:
             with st.container(border=True):
                 col_icon, col_text = st.columns([1, 5])
                 with col_icon:
-                    st.markdown("# 📍") # 大圖示
+                    st.markdown("# 📍") 
                 with col_text:
                     st.markdown(f"**{point['name']}**")
                     st.caption(f"位置: {point['loc']}")
@@ -150,7 +161,7 @@ Malikay工作室 - 療程記錄
 ========================================
 """
         st.markdown("---")
-        # 下載按鈕 (滿版)
+        # 下載按鈕
         st.download_button(
             label="💾 下載病歷記錄 (.txt)",
             data=report_text,
@@ -159,11 +170,10 @@ Malikay工作室 - 療程記錄
             use_container_width=True
         )
 
-    # 計時器工具 (移到最下方，避免干擾診斷)
+    # 計時器工具
     st.markdown("---")
     with st.expander("⏱️ 按摩計時器工具"):
         timer_minutes = st.slider("設定時間 (分鐘)", 1, 10, 3)
-        # [手機優化] 滿版按鈕
         if st.button("▶ 開始計時", use_container_width=True):
             progress_bar = st.progress(0)
             status_text = st.empty()
@@ -174,7 +184,6 @@ Malikay工作室 - 療程記錄
                 progress_bar.progress(progress)
                 remaining = total_seconds - i - 1
                 mins, secs = divmod(remaining, 60)
-                # 使用大型字體顯示倒數
                 status_text.markdown(f"<h1 style='text-align: center; color: #4CAF50;'>{mins:02d}:{secs:02d}</h1>", unsafe_allow_html=True)
                 time.sleep(1)
             
